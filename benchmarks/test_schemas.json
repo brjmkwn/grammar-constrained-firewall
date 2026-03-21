@@ -1,0 +1,60 @@
+{
+  "InvoiceExtraction": {
+    "type": "object",
+    "properties": {
+      "invoice_id": {"type": "string"},
+      "vendor_name": {"type": "string"},
+      "total_amount": {"type": "number"},
+      "currency": {"type": "string", "enum": ["USD", "EUR", "GBP", "CAD", "JPY", "INR"]},
+      "line_items": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "description": {"type": "string"},
+            "quantity": {"type": "integer"},
+            "unit_price": {"type": "number"}
+          },
+          "required": ["description", "quantity", "unit_price"]
+        }
+      }
+    },
+    "required": ["invoice_id", "vendor_name", "total_amount", "currency", "line_items"]
+  },
+  "MedicalRecordExtraction": {
+    "type": "object",
+    "properties": {
+      "patient_id": {"type": "string"},
+      "blood_group": {"type": "string", "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]},
+      "systolic_bp": {"type": "integer"},
+      "diastolic_bp": {"type": "integer"},
+      "allergies": {
+        "type": "array",
+        "items": {"type": "string"}
+      },
+      "requires_followup": {"type": "boolean"}
+    },
+    "required": ["patient_id", "blood_group", "systolic_bp", "diastolic_bp", "allergies", "requires_followup"]
+  },
+  "SQLQueryAST": {
+    "type": "object",
+    "properties": {
+      "statement_type": {"type": "string", "enum": ["SELECT", "INSERT", "UPDATE", "DELETE"]},
+      "table": {"type": "string"},
+      "limit": {"type": "integer"},
+      "is_distinct": {"type": "boolean"}
+    },
+    "required": ["statement_type", "table", "limit", "is_distinct"]
+  },
+  "KubernetesDeploymentSpec": {
+    "type": "object",
+    "properties": {
+      "apiVersion": {"type": "string", "enum": ["apps/v1"]},
+      "kind": {"type": "string", "enum": ["Deployment"]},
+      "metadata_name": {"type": "string"},
+      "replicas": {"type": "integer"},
+      "restartPolicy": {"type": "string", "enum": ["Always", "OnFailure", "Never"]}
+    },
+    "required": ["apiVersion", "kind", "metadata_name", "replicas", "restartPolicy"]
+  }
+}
