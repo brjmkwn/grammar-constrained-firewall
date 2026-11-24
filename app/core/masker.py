@@ -13,10 +13,7 @@ _FSM_STATE_TRANSITION_TABLE: Dict[int, Dict[int, Dict[int, int]]] = {}
 class VocabularyMapper:
     def __init__(self, tokenizer_name: str = "gpt-4o"):
         self.tokenizer_name = tokenizer_name
-        try:
-            self.encoding = tiktoken.get_encoding("cl100k_base")
-        except Exception:
-            self.encoding = tiktoken.encoding_for_model("gpt-4o")
+        self.encoding = tiktoken.get_encoding("cl100k_base")
 
         self.vocab_size = self.encoding.n_vocab
         self.eos_token_id = self.encoding.eot_token
@@ -188,21 +185,27 @@ try:
     class FSMLogitsProcessor(LogitsProcessor):
         def __init__(self, masker: TokenLogitMasker):
             self.masker = masker
+            self.prompt_length = None
 
         def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-            for batch_idx in range(scores.shape[0]):
-                valid_token_ids = self.masker.get_valid_token_ids()
-                mask = torch.ones_like(scores[batch_idx], dtype=torch.bool)
-                for tid in valid_token_ids:
-                    if tid < len(mask):
-                        mask[tid] = False
-                scores[batch_idx, mask] = NEG_INF
-
-            if scores.shape[0] == 1 and input_ids.shape[1] > 0:
-                last_token = input_ids[0, -1].item()
-                self.masker.step(last_token)
-
-            return scores
+            if self.prompt_length is None:
+                self.prompt_length = input_ids.shape[1]
+            masked = torch.full_like(scores, NEG_INF)
+            for row, generated in enumerate(input_ids[:, self.prompt_length:].tolist()):
+                state = self.masker.fsm.initial
+                for token in generated:
+                    if token == self.masker.eos_token_id and state in self.masker.fsm.finals:
+                        break
+                    next_state = self.masker.get_valid_tokens_for_state(state).get(token)
+                    if next_state is None:
+                        raise ValueError("Generated prefix is incompatible with the grammar")
+                    state = next_state
+                valid = set(self.masker.get_valid_tokens_for_state(state))
+                if state in self.masker.fsm.finals:
+                    valid.add(self.masker.eos_token_id)
+                indices = [token for token in valid if token < scores.shape[-1]]
+                masked[row, indices] = scores[row, indices]
+            return masked
 
 except ImportError:
     FSMLogitsProcessor = None  # type: ignore

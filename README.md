@@ -141,14 +141,16 @@ for chunk in stream:
 
 ## Testing
 
-Run test suite:
+Install the test dependencies, cache the tokenizer once, and run the test suite.
 ```bash
+python -m pip install -r requirements-test.txt
+python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 pytest tests/ -v
 ```
 
-Run A/B benchmark comparing unconstrained generation against constrained masking:
+The benchmark runs the gateway's synthetic-logit engine and validates the generated JSON per schema. The PyTorch integration is exercised by the separate logits processor test.
 ```bash
-python benchmarks/benchmark_runner.py --iterations 1000 --workers 8
+python benchmarks/benchmark_runner.py --iterations 1000 --workers 1
 ```
 
 ---
